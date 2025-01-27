@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    Int             @id @default(autoincrement())
+  email                 String          @unique
+  username              String          @unique
+  firstName             String
+  lastName              String
+  avatar                String? // potom pominyat
+  points                Float           @default(0)
+  password              String
+  hashedRefreshToken    String?
+  pins                  UserPin[]
+
+  events                Event[]
+  userEventDetails      EventUser[]
+
+  applications          Application[]   @relation("SentApplications")
+  approvedApplications  Application[]   @relation("ApprovedApplications")
+
+  messages              Message[]       @relation("SentMessages")
+  receivedMessages      Message[]       @relation("ReceivedMessages")
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+}
+
+model Pin {
+  id            Int       @id @default(autoincrement())
+  title         String
+  description   String?
+  image         String?   // Потом убрати Opt
+  rarity        PinRarity
+  pointsCost    Float
+
+  owners        UserPin[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model UserPin {
+  id            Int       @id @default(autoincrement())
+  userId        Int
+  user          User      @relation(fields: [userId], references: [id])
+
+  pinId         Int
+  pin           Pin       @relation(fields: [pinId], references: [id])
+
+  createdAt     DateTime  @default(now())
+}
+
+model Event {
+  id            Int       @id @default(autoincrement())
+  title         String
+  description   String?
+  image         String?   // Ще думаю чи opt
+  points        Float     @default(30)
+
+  organizer     User      @relation(fields: [organizerId], references: [id])
+  organizerId   Int
+
+  applications  Application[]
+  members       EventUser[]
+  membersLimit  Float?
+
+  tasks         Task[]
+  messages      Message[]
+
+
+  eventStatus   EventStatus @default(OPEN_FOR_APPLICATIONS)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model EventUser {
+  id            Int       @id @default(autoincrement())
+  user          User      @relation(fields: [userId], references: [id])
+  userId        Int
+
+  event         Event     @relation(fields: [eventId], references: [id])
+  eventId       Int
+
+  createdTask   Task[]    @relation("TaskCreator")
+  assignedTasks Task[]    @relation("TaskAssignedBy")
+
+  status        EventUserStatus
+  tasks         Task[]
+  role          Role      @default(USER)
+
+  joinedAt      DateTime  @default(now())
+}
+
+model Task {
+  id            Int           @id @default(autoincrement())
+  title         String
+  description   String?
+  priority      TaskPriority @default(low)
+  points        Float?
+  status        TaskStatus   @default(PENDING)
+
+  event         Event        @relation(fields: [eventId], references: [id])
+  eventId       Int
+
+  creator       EventUser    @relation("TaskCreator", fields: [creatorId], references: [id])
+  creatorId     Int
+
+  assignee      EventUser    @relation(fields: [assigneeId], references: [id])
+  assigneeId    Int
+
+  assignedBy    EventUser?   @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  assignedById  Int?
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Application {
+  id               Int             @id @default(autoincrement())
+
+  event            Event           @relation(fields: [eventId], references: [id])
+  eventId          Int
+
+  sender           User            @relation("SentApplications", fields: [senderId], references: [id])
+  senderId         Int
+  senderComment    String?
+
+  approver         User?           @relation("ApprovedApplications", fields: [approverId], references: [id])
+  approverId       Int?
+  approverComment  String?
+
+  applicationStatus ApplicationStatus @default(PENDING)
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model Message {
+  id               Int             @id @default(autoincrement())
+  content          String
+  isGroupMessage   Boolean         @default(true)
+  isPinned         Boolean         @default(false)
+
+  sender           User            @relation("SentMessages", fields: [senderId], references: [id])
+  senderId         Int
+
+  event            Event           @relation(fields: [eventId], references: [id])
+  eventId          Int
+
+  receiver         User?           @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId       Int?
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+enum EventUserStatus {
+  BANNED
+}
+
+enum PinRarity {
+  COMPLETED
+}
+
+enum EventStatus {
+  OPEN_FOR_APPLICATIONS    // Набір заявок
+  CLOSED_FOR_APPLICATIONS  // Закрито для заявок
+  COMPLETED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ORGANIZER
+}
+
+enum EventVisibility {
+  OPEN        // Будь-хто може приєднатися
+  CLOSED      // Видно лише членам, але заявки можливі
+  PRIVATE     // Подію видно лише організатору і за запрошенням
+}
+
+enum TaskStatus {
+  PENDING        // Очікує виконання
+  IN_PROGRESS    // У процесі виконання
+  IN_CHECKING    // На перевірці
+  COMPLETED      // Виконано
+  CANCELLED      // Скасовано
+}
