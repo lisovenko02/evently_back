@@ -1,34 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Param, ParseIntPipe } from '@nestjs/common';
 import { UserPinService } from './user-pin.service';
-import { CreateUserPinDto } from './dto/create-user-pin.dto';
-import { UpdateUserPinDto } from './dto/update-user-pin.dto';
+import { CurrentUser } from 'src/auth/decorators/user.decorator';
+import { User } from '@prisma/client';
 
 @Controller('user-pin')
 export class UserPinController {
   constructor(private readonly userPinService: UserPinService) {}
 
-  @Post()
-  create(@Body() createUserPinDto: CreateUserPinDto) {
-    return this.userPinService.create(createUserPinDto);
+  @Get(':userId')
+  async getUserPins(@Param('userId', ParseIntPipe) userId: number) {
+    return this.userPinService.getUserPins(userId);
   }
 
-  @Get()
-  findAll() {
-    return this.userPinService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userPinService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserPinDto: UpdateUserPinDto) {
-    return this.userPinService.update(+id, updateUserPinDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userPinService.remove(+id);
+  @Post('buy/:pinId')
+  async buyPin(
+    @Param('pinId', ParseIntPipe) pinId: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.userPinService.buyPin(pinId, user);
   }
 }

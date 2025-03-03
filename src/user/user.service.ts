@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { hash } from 'argon2';
+import { SignInDto } from 'src/auth/dto/signIn.dto';
 import { SignUpDto } from 'src/auth/dto/signUp.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -11,7 +12,6 @@ export class UserService {
     const { password, ...user } = signUpDto;
 
     const hashedPassword = await hash(password);
-    console.log(hashedPassword);
 
     return this.prismaService.user.create({
       data: {
@@ -30,6 +30,7 @@ export class UserService {
   }
 
   async findOne(userId: number) {
+    console.log('userId', userId);
     return await this.prismaService.user.findUnique({
       where: {
         id: userId,
@@ -37,6 +38,12 @@ export class UserService {
     });
   }
 
+  async updateUserAvatar(userId: number, avatarUrl: string) {
+    return this.prismaService.user.update({
+      where: { id: userId },
+      data: { avatar: avatarUrl },
+    });
+  }
   async updateHashedRefreshToken(userId: number, hashedRt: string) {
     return this.prismaService.user.update({
       where: {

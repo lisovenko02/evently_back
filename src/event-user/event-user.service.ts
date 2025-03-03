@@ -9,7 +9,7 @@ export class EventUserService {
 
   async updateRole(
     updateUserRoleRoleDto: UpdateEventUserRoleDto,
-    currentUser: User,
+    currentUser: User, // ПОТОМ МОЖЛИВО ДОБАВИТЬ В ПРІЗМІ ХТО ЗМІНИВ РОЛЬ
   ) {
     const { eventId, role, userId } = updateUserRoleRoleDto;
 

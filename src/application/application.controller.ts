@@ -23,7 +23,7 @@ export class ApplicationController {
     );
   }
 
-  @Roles(Role.ORGANIZER)
+  @Roles(Role.ORGANIZER, Role.MODERATOR)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch('status')
   async updateStatus(

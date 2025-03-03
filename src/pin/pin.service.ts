@@ -1,26 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreatePinDto } from './dto/create-pin.dto';
-import { UpdatePinDto } from './dto/update-pin.dto';
 
 @Injectable()
 export class PinService {
-  create(createPinDto: CreatePinDto) {
-    return 'This action adds a new pin';
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return `This action returns all pin`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} pin`;
-  }
-
-  update(id: number, updatePinDto: UpdatePinDto) {
-    return `This action updates a #${id} pin`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} pin`;
+  async createPin(dto: CreatePinDto) {
+    return this.prisma.pin.create({ data: dto });
   }
 }

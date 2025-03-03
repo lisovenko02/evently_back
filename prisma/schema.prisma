@@ -19,14 +19,14 @@ model User {
   hashedRefreshToken    String?
   pins                  UserPin[]
 
+
   events                Event[]
   userEventDetails      EventUser[]
 
   applications          Application[]   @relation("SentApplications")
   approvedApplications  Application[]   @relation("ApprovedApplications")
 
-  messages              Message[]       @relation("SentMessages")
-  receivedMessages      Message[]       @relation("ReceivedMessages")
+  notifications         Notification[]
 
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
@@ -35,7 +35,7 @@ model User {
 model Pin {
   id            Int       @id @default(autoincrement())
   title         String
-  description   String?
+  description   String
   image         String?   // Потом убрати Opt
   rarity        PinRarity
   pointsCost    Float
@@ -64,6 +64,18 @@ model Event {
   image         String?   // Ще думаю чи opt
   points        Float     @default(30)
 
+  category      EventCategory
+
+  startTime     DateTime?
+  endTime       DateTime?
+
+  isOnline      Boolean     @default(false)
+
+  city          String?
+  country       String?
+  latitude      Float?
+  longitude     Float?
+
   organizer     User      @relation(fields: [organizerId], references: [id])
   organizerId   Int
 
@@ -82,28 +94,34 @@ model Event {
 }
 
 model EventUser {
-  id            Int       @id @default(autoincrement())
-  user          User      @relation(fields: [userId], references: [id])
-  userId        Int
+  id                    Int             @id @default(autoincrement())
+  user                  User            @relation(fields: [userId], references: [id])
+  userId                Int
 
-  event         Event     @relation(fields: [eventId], references: [id])
-  eventId       Int
+  event                 Event           @relation(fields: [eventId], references: [id])
+  eventId               Int
 
-  createdTask   Task[]    @relation("TaskCreator")
-  assignedTasks Task[]    @relation("TaskAssignedBy")
+  messages              Message[]       @relation("EventUserMessages")
+  receivedMessages      Message[]       @relation("EventUserReceivedMessages")
 
-  status        EventUserStatus
-  tasks         Task[]
-  role          Role      @default(USER)
+  createdTask           Task[]          @relation("TaskCreator")
+  assignedTasks         Task[]          @relation("TaskAssignedBy")
 
-  joinedAt      DateTime  @default(now())
+  tasks                 Task[]
+
+  notifications         Notification[]
+
+  status                EventUserStatus @default(ACTIVE)
+  role                  Role            @default(USER)
+
+  joinedAt              DateTime        @default(now())
 }
 
 model Task {
   id            Int           @id @default(autoincrement())
   title         String
   description   String?
-  priority      TaskPriority @default(low)
+  priority      TaskPriority @default(LOW)
   points        Float?
   status        TaskStatus   @default(PENDING)
 
@@ -113,8 +131,8 @@ model Task {
   creator       EventUser    @relation("TaskCreator", fields: [creatorId], references: [id])
   creatorId     Int
 
-  assignee      EventUser    @relation(fields: [assigneeId], references: [id])
-  assigneeId    Int
+  assignee      EventUser?    @relation(fields: [assigneeId], references: [id])
+  assigneeId    Int?
 
   assignedBy    EventUser?   @relation("TaskAssignedBy", fields: [assignedById], references: [id])
   assignedById  Int?
@@ -149,36 +167,56 @@ model Message {
   isGroupMessage   Boolean         @default(true)
   isPinned         Boolean         @default(false)
 
-  sender           User            @relation("SentMessages", fields: [senderId], references: [id])
+  sender           EventUser       @relation("EventUserMessages", fields: [senderId], references: [id])
   senderId         Int
 
   event            Event           @relation(fields: [eventId], references: [id])
   eventId          Int
 
-  receiver         User?           @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiver         EventUser?           @relation("EventUserReceivedMessages", fields: [receiverId], references: [id])
   receiverId       Int?
 
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
 
+model Notification {
+  id            Int       @id @default(autoincrement())
+  content       String     
+  isRead        Boolean   @default(false) 
+  type          NotificationType     
+  
+  user          User      @relation(fields: [userId], references: [id])
+  userId        Int
+  
+  eventUser     EventUser? @relation(fields: [eventUserId], references: [id])
+  eventUserId   Int?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
 enum TaskPriority {
-  low
-  medium
-  high
+  LOW
+  MEDIUM
+  HIGH
 }
 
 enum EventUserStatus {
   BANNED
+  ACTIVE
 }
 
 enum PinRarity {
-  COMPLETED
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
 }
 
 enum EventStatus {
-  OPEN_FOR_APPLICATIONS    // Набір заявок
-  CLOSED_FOR_APPLICATIONS  // Закрито для заявок
+  OPEN_FOR_APPLICATIONS 
+  CLOSED_FOR_APPLICATIONS  
   COMPLETED
 }
 
@@ -195,15 +233,32 @@ enum Role {
 }
 
 enum EventVisibility {
-  OPEN        // Будь-хто може приєднатися
-  CLOSED      // Видно лише членам, але заявки можливі
-  PRIVATE     // Подію видно лише організатору і за запрошенням
+  OPEN
+  CLOSED      
+  PRIVATE     
+}
+
+enum NotificationType {
+  MESSAGE
+  TASK
+  EVENT
 }
 
 enum TaskStatus {
-  PENDING        // Очікує виконання
-  IN_PROGRESS    // У процесі виконання
-  IN_CHECKING    // На перевірці
-  COMPLETED      // Виконано
-  CANCELLED      // Скасовано
+  PENDING       
+  IN_PROGRESS    
+  IN_CHECKING    
+  COMPLETED
+  CANCELLED
+}
+
+enum EventCategory {
+  SPORTS
+  MUSIC
+  EDUCATION
+  BUSINESS
+  TECH
+  ART
+  GAMING
+  OTHER
 }

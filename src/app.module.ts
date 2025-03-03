@@ -16,7 +16,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth/jwt-auth.guard';
 import { JwtStrategy } from './auth/strategies/jwt.strategy';
 import { RefreshStrategy } from './auth/strategies/refresh-token.strategy';
-import { ConfigJwtModule } from './config-jwt/config-jwt.module';
+import { ConfigJwtModule } from './configs/config-jwt.module';
 
 @Module({
   imports: [

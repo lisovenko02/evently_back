@@ -8,7 +8,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshStrategy } from './strategies/refresh-token.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth/jwt-auth.guard';
 import { APP_GUARD } from '@nestjs/core';
-import { ConfigJwtModule } from 'src/config-jwt/config-jwt.module';
+import { ConfigJwtModule } from 'src/configs/config-jwt.module';
 
 @Module({
   imports: [ConfigJwtModule],
