@@ -126,6 +126,8 @@ export class AuthService {
 
   async refreshTokens(req: Request, res: Response) {
     const refreshToken = req.cookies.refreshToken;
+    console.log('req.cookies', req.cookies);
+
     if (!refreshToken)
       throw new UnauthorizedException('Refresh token not found');
 
@@ -134,7 +136,7 @@ export class AuthService {
       payload = this.jwtService.verify(refreshToken, {
         secret: process.env.REFRESH_JWT_SECRET,
       });
-    } catch (err) {
+    } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
@@ -157,7 +159,7 @@ export class AuthService {
     res.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'none',
       maxAge: 60 * 60 * 24 * 14 * 1000,
     });
 
