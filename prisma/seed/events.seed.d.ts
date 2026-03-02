@@ -1,0 +1,23 @@
+import { PrismaClient, User } from '@prisma/client';
+export declare function seedEvents(prisma: PrismaClient, users: User[]): Promise<{
+    id: number;
+    title: string;
+    description: string;
+    image: string;
+    points: import("@prisma/client/runtime/library").Decimal | null;
+    category: import(".prisma/client").$Enums.EventCategory;
+    startTime: Date | null;
+    endTime: Date | null;
+    isOnline: boolean;
+    address: string | null;
+    city: string | null;
+    country: string | null;
+    latitude: import("@prisma/client/runtime/library").Decimal | null;
+    longitude: import("@prisma/client/runtime/library").Decimal | null;
+    visibility: import(".prisma/client").$Enums.EventVisibility;
+    maxParticipants: number | null;
+    organizerId: number;
+    boardId: number | null;
+    createdAt: Date;
+    updatedAt: Date;
+}[]>;
