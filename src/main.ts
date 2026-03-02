@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,10 +18,22 @@ async function bootstrap() {
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
+          const [firstConstraint] = Object.values(error.constraints || {});
+          return `${error.property}: ${firstConstraint || 'Invalid value'}`;
+        });
+        return new BadRequestException(messages);
+      },
     }),
   );
 
   app.use(cookieParser());
+
+  app.use((req, res, next) => {
+    console.log('Incoming request:', req.method, req.url);
+    next();
+  });
 
   await app.listen(process.env.PORT ?? 4200);
 }

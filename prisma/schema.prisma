@@ -8,192 +8,374 @@ datasource db {
 }
 
 model User {
-  id                    Int             @id @default(autoincrement())
-  email                 String          @unique
-  username              String          @unique
-  firstName             String
-  lastName              String
-  avatar                String? // potom pominyat
-  points                Float           @default(0)
-  password              String
-  hashedRefreshToken    String?
-  pins                  UserPin[]
+  id                 Int       @id @default(autoincrement())
+  email              String    @unique
+  username           String    @unique
+  firstName          String
+  lastName           String
+  avatar             String? // potom pominyat
+  points             Float?    @default(0)
+  password           String
+  hashedRefreshToken String?
+  pins               UserPin[]
 
+  events           Event[]
+  userEventDetails EventUser[]
 
-  events                Event[]
-  userEventDetails      EventUser[]
+  actedHistories     EventUserHistory[] @relation("EventUserHistoryActor")
+  eventUserHistories EventUserHistory[]
 
-  applications          Application[]   @relation("SentApplications")
-  approvedApplications  Application[]   @relation("ApprovedApplications")
+  eventBans  EventBan[]
+  bansIssued EventBan[] @relation("EventBansBy")
 
-  notifications         Notification[]
+  applications         Application[] @relation("SentApplications")
+  receivedApplications Application[] @relation("ReceivedApplications")
+  actedApplications    Application[] @relation("ActedApplications")
 
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Pin {
-  id            Int       @id @default(autoincrement())
-  title         String
-  description   String
-  image         String?   // Потом убрати Opt
-  rarity        PinRarity
-  pointsCost    Float
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String
+  image       String
+  rarity      PinRarity
+  pointsCost  Float
 
-  owners        UserPin[]
+  owners UserPin[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model UserPin {
-  id            Int       @id @default(autoincrement())
-  userId        Int
-  user          User      @relation(fields: [userId], references: [id])
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
 
-  pinId         Int
-  pin           Pin       @relation(fields: [pinId], references: [id])
+  pinId Int
+  pin   Pin @relation(fields: [pinId], references: [id])
 
-  createdAt     DateTime  @default(now())
+  createdAt DateTime @default(now())
 }
 
 model Event {
-  id            Int       @id @default(autoincrement())
-  title         String
-  description   String?
-  image         String?   // Ще думаю чи opt
-  points        Float     @default(30)
+  id          Int           @id @default(autoincrement())
+  title       String        @db.VarChar(120)
+  description String        @db.Text
+  image       String
+  points      Decimal?      @default(30) @db.Decimal(10, 2)
+  category    EventCategory
+  startTime   DateTime?
+  endTime     DateTime?
+  isOnline    Boolean       @default(false)
 
-  category      EventCategory
+  address   String?  @db.Text
+  city      String?  @db.Text
+  country   String?  @db.Text
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
 
-  startTime     DateTime?
-  endTime       DateTime?
+  visibility      EventVisibility @default(OPEN)
+  maxParticipants Int?
 
-  isOnline      Boolean     @default(false)
+  organizer   User @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  organizerId Int
 
-  city          String?
-  country       String?
-  latitude      Float?
-  longitude     Float?
+  members          EventUser[]        @relation("EventMembers")
+  membersHistories EventUserHistory[]
 
-  organizer     User      @relation(fields: [organizerId], references: [id])
-  organizerId   Int
+  bans EventBan[]
 
-  applications  Application[]
-  members       EventUser[]
-  membersLimit  Float?
+  applications Application[]
+  chats        Chat[]
 
-  tasks         Task[]
-  messages      Message[]
+  board   TaskBoard?
+  boardId Int?       @unique
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  eventStatus   EventStatus @default(OPEN_FOR_APPLICATIONS)
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  @@index([category])
+  @@index([startTime])
+  @@index([isOnline])
 }
 
 model EventUser {
-  id                    Int             @id @default(autoincrement())
-  user                  User            @relation(fields: [userId], references: [id])
-  userId                Int
+  id      Int   @id @default(autoincrement())
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  Int
+  event   Event @relation(fields: [eventId], references: [id], name: "EventMembers", onDelete: Cascade)
+  eventId Int
+  role    Role  @default(USER)
 
-  event                 Event           @relation(fields: [eventId], references: [id])
-  eventId               Int
+  createdTasks    Task[]         @relation("TaskCreator")
+  assignedToTasks TaskAssignee[] @relation("TaskAssignee")
+  assignedByTasks TaskAssignee[] @relation("TaskAssigner")
+  createdComments TaskComment[]  @relation("EventUserComments")
 
-  messages              Message[]       @relation("EventUserMessages")
-  receivedMessages      Message[]       @relation("EventUserReceivedMessages")
+  createdChats       Chat[]            @relation("CreatedChats")
+  receivedChats      Chat[]            @relation("ReceivedChats")
+  chatParticipations ChatParticipant[]
+  messages           Message[]         @relation("EventUserMessages")
 
-  createdTask           Task[]          @relation("TaskCreator")
-  assignedTasks         Task[]          @relation("TaskAssignedBy")
+  notifications Notification[]
 
-  tasks                 Task[]
+  joinedAt DateTime @default(now())
 
-  notifications         Notification[]
+  @@unique([userId, eventId])
+  @@index([role])
+}
 
-  status                EventUserStatus @default(ACTIVE)
-  role                  Role            @default(USER)
+model EventUserHistory {
+  id Int @id @default(autoincrement())
 
-  joinedAt              DateTime        @default(now())
+  eventUserId Int?
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  actorUserId Int?
+  actorUser   User? @relation("EventUserHistoryActor", fields: [actorUserId], references: [id])
+
+  eventId Int
+  event   Event @relation(fields: [eventId], references: [id])
+
+  status    EventUserHistoryStatus
+  reason    String?
+  createdAt DateTime               @default(now())
+
+  @@index([eventId, createdAt])
+  @@index([eventId, status])
+  @@index([eventId, actorUserId])
+}
+
+model EventBan {
+  id Int @id @default(autoincrement())
+
+  eventId Int
+  userId  Int
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  reason String?
+
+  bannedById Int?
+  bannedBy   User? @relation("EventBansBy", fields: [bannedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model TaskBoard {
+  id Int @id @default(autoincrement())
+
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId Int   @unique
+
+  columns TaskColumn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskColumn {
+  id    Int    @id @default(autoincrement())
+  title String
+
+  board   TaskBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId Int
+
+  tasks Task[]
+  order Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Task {
-  id            Int           @id @default(autoincrement())
-  title         String
-  description   String?
-  priority      TaskPriority @default(LOW)
-  points        Float?
-  status        TaskStatus   @default(PENDING)
+  id          Int          @id @default(autoincrement())
+  title       String
+  description String?
+  priority    TaskPriority @default(LOW)
+  points      Float?
+  dueDate     DateTime?
 
-  event         Event        @relation(fields: [eventId], references: [id])
-  eventId       Int
+  column   TaskColumn @relation(fields: [columnId], references: [id])
+  columnId Int
 
-  creator       EventUser    @relation("TaskCreator", fields: [creatorId], references: [id])
-  creatorId     Int
+  creator   EventUser @relation("TaskCreator", fields: [creatorId], references: [id])
+  creatorId Int
 
-  assignee      EventUser?    @relation(fields: [assigneeId], references: [id])
-  assigneeId    Int?
+  assignees TaskAssignee[]
+  comments  TaskComment[]
+  // assignee   EventUser? @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  // assigneeId Int?
 
-  assignedBy    EventUser?   @relation("TaskAssignedBy", fields: [assignedById], references: [id])
-  assignedById  Int?
+  // assignedBy   EventUser? @relation("TaskAssigner", fields: [assignedById], references: [id])
+  // assignedById Int?
 
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model Application {
-  id               Int             @id @default(autoincrement())
+model TaskAssignee {
+  id     Int  @id @default(autoincrement())
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId Int
 
-  event            Event           @relation(fields: [eventId], references: [id])
-  eventId          Int
+  assignee   EventUser @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assigneeId Int
 
-  sender           User            @relation("SentApplications", fields: [senderId], references: [id])
-  senderId         Int
-  senderComment    String?
+  assignedBy   EventUser? @relation("TaskAssigner", fields: [assignedById], references: [id])
+  assignedById Int?
 
-  approver         User?           @relation("ApprovedApplications", fields: [approverId], references: [id])
-  approverId       Int?
-  approverComment  String?
+  assignedAt DateTime @default(now())
 
-  applicationStatus ApplicationStatus @default(PENDING)
+  @@unique([taskId, assigneeId])
+}
 
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+model TaskComment {
+  id      Int    @id @default(autoincrement())
+  content String
+
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId Int
+
+  author   EventUser @relation("EventUserComments", fields: [authorId], references: [id])
+  authorId Int
+
+  createdAt DateTime @default(now())
+}
+
+model Chat {
+  id      Int      @id @default(autoincrement())
+  type    ChatType
+  name    String?
+  event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId Int
+
+  chatImg String?
+
+  creator   EventUser @relation("CreatedChats", fields: [creatorId], references: [id])
+  creatorId Int
+
+  recipient   EventUser? @relation("ReceivedChats", fields: [recipientId], references: [id])
+  recipientId Int?
+
+  participants ChatParticipant[]
+  messages     Message[]
+
+  lastMessageId Int?      @unique
+  lastMessage   Message?  @relation("LastMessage", fields: [lastMessageId], references: [id])
+  lastMessageAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, name])
+}
+
+model ChatParticipant {
+  id     Int  @id @default(autoincrement())
+  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  chatId Int
+
+  eventUser   EventUser @relation(fields: [eventUserId], references: [id], onDelete: Cascade)
+  eventUserId Int
+
+  joinedAt DateTime @default(now())
+
+  @@unique([chatId, eventUserId])
 }
 
 model Message {
-  id               Int             @id @default(autoincrement())
-  content          String
-  isGroupMessage   Boolean         @default(true)
-  isPinned         Boolean         @default(false)
+  id      Int    @id @default(autoincrement())
+  content String
 
-  sender           EventUser       @relation("EventUserMessages", fields: [senderId], references: [id])
-  senderId         Int
+  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  chatId Int
 
-  event            Event           @relation(fields: [eventId], references: [id])
-  eventId          Int
+  sender   EventUser @relation("EventUserMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId Int
 
-  receiver         EventUser?           @relation("EventUserReceivedMessages", fields: [receiverId], references: [id])
-  receiverId       Int?
+  chatLastMessage Chat? @relation("LastMessage")
 
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  attachments MessageAttachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chatId])
+  @@index([senderId])
+}
+
+model MessageAttachment {
+  id        Int      @id @default(autoincrement())
+  fileUrl   String
+  fileName  String?
+  message   Message  @relation(fields: [messageId], references: [id])
+  messageId Int
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+}
+
+model Application {
+  id Int @id @default(autoincrement())
+
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId Int
+
+  sender        User    @relation("SentApplications", fields: [senderId], references: [id])
+  senderId      Int
+  senderComment String?
+
+  receiver   User? @relation("ReceivedApplications", fields: [receiverId], references: [id])
+  receiverId Int?
+
+  decisionBy        User?   @relation("ActedApplications", fields: [decisionById], references: [id])
+  decisionById      Int?
+  decisionByComment String?
+
+  type              ApplicationType   @default(REQUEST)
+  applicationStatus ApplicationStatus @default(PENDING)
+
+  rejectSource       ApplicationRejectSource?
+  systemRejectReason ApplicationSystemRejectReason?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId, type, applicationStatus])
+  @@index([decisionById])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([eventId, createdAt])
 }
 
 model Notification {
-  id            Int       @id @default(autoincrement())
-  content       String     
-  isRead        Boolean   @default(false) 
-  type          NotificationType     
-  
-  user          User      @relation(fields: [userId], references: [id])
-  userId        Int
-  
-  eventUser     EventUser? @relation(fields: [eventUserId], references: [id])
-  eventUserId   Int?
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id      Int              @id @default(autoincrement())
+  content String
+  isRead  Boolean          @default(false)
+  type    NotificationType
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  eventUser   EventUser? @relation(fields: [eventUserId], references: [id])
+  eventUserId Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum TaskPriority {
@@ -202,9 +384,13 @@ enum TaskPriority {
   HIGH
 }
 
-enum EventUserStatus {
+enum EventUserHistoryStatus {
+  JOINED
+  SELF_LEFT
+  KICKED
   BANNED
-  ACTIVE
+  UNBANNED
+  ROLE_CHANGED
 }
 
 enum PinRarity {
@@ -214,16 +400,21 @@ enum PinRarity {
   LEGENDARY
 }
 
-enum EventStatus {
-  OPEN_FOR_APPLICATIONS 
-  CLOSED_FOR_APPLICATIONS  
-  COMPLETED
-}
-
 enum ApplicationStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+enum ApplicationRejectSource {
+  STAFF
+  APPLICANT
+  SYSTEM
+}
+
+enum ApplicationSystemRejectReason {
+  CHANGED_VISIBILITY
+  EVENT_IS_OVER
 }
 
 enum Role {
@@ -234,22 +425,14 @@ enum Role {
 
 enum EventVisibility {
   OPEN
-  CLOSED      
-  PRIVATE     
+  CLOSED
+  PRIVATE
 }
 
 enum NotificationType {
   MESSAGE
   TASK
   EVENT
-}
-
-enum TaskStatus {
-  PENDING       
-  IN_PROGRESS    
-  IN_CHECKING    
-  COMPLETED
-  CANCELLED
 }
 
 enum EventCategory {
@@ -261,4 +444,15 @@ enum EventCategory {
   ART
   GAMING
   OTHER
+}
+
+enum ApplicationType {
+  REQUEST
+  INVITE
+}
+
+enum ChatType {
+  GENERAL
+  PRIVATE
+  GROUP
 }

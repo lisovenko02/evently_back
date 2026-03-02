@@ -1,7 +1,15 @@
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { memoryStorage } from 'multer';
+import { BadRequestException } from '@nestjs/common';
 
 export const multerConfig: MulterOptions = {
   storage: memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new BadRequestException('Only images are allowed'), false);
+    }
+  },
 };
