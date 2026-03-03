@@ -57,7 +57,7 @@ export class AuthService {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'none',
       maxAge: 60 * 60 * 24 * 14 * 1000,
     });
 
